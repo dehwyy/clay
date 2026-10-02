@@ -3,6 +3,7 @@ package clayfx
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/not-for-prod/clay/server"
 	"github.com/not-for-prod/clay/transport"
@@ -10,6 +11,8 @@ import (
 )
 
 const DescsGroup = "clay.descs"
+
+const startAbortStopTimeout = 5 * time.Second
 
 type Config struct {
 	RPCPort int
@@ -46,7 +49,7 @@ func ProvideDesc(constructor any) fx.Option {
 		fx.Annotate(
 			constructor,
 			fx.As(new(transport.ServiceDesc)),
-			fx.ResultTags(`group:"clay.descs"`),
+			fx.ResultTags(`group:"`+DescsGroup+`"`),
 		),
 	)
 }
@@ -100,7 +103,13 @@ func register(params registerParams) {
 					}
 					return err
 				case <-ctx.Done():
-					return ctx.Err()
+					stopCtx, cancel := context.WithTimeout(context.Background(), startAbortStopTimeout)
+					defer cancel()
+
+					return errors.Join(
+						ctx.Err(),
+						params.Server.Stop(stopCtx),
+					)
 				}
 			},
 			OnStop: func(ctx context.Context) error {

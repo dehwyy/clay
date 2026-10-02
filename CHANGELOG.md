@@ -24,7 +24,7 @@ Backward compatible with v0.4.x at the API level. Behavior changes are listed be
 - `Run` returns `nil` after `Stop` (v0.4 returned `http.ErrServerClosed`).
 - `Stop` closes the cmux root listener, force-closes HTTP when ctx expires and falls back from `GracefulStop` to `Stop` on `ctx.Done()`. Repeated calls return the first result.
 - `WithGRPCUnaryMiddlewares` / `WithGRPCMiddlewares` accumulate and chain instead of panicking on the second call.
-- HTTP middlewares are mounted on an outer router, so `WithHTTPMux` with pre-registered routes plus `WithHTTPMiddlewares` no longer panics.
+- The user mux from `WithHTTPMux` stays outermost: its own `mux.Use` middlewares run before `WithHTTPMiddlewares` (same order as v0.4). Swagger, `WithHTTPRoutes` and the gateway are mounted on an inner router behind `clayroute.Middleware` and `WithHTTPMiddlewares`. Routes pre-registered on the user mux no longer panic, but they are served outside `WithHTTPMiddlewares`.
 - `mwhttp` response writer implements `Unwrap`.
 
 ### Unchanged by design

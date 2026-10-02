@@ -62,6 +62,7 @@ func TestHTTPRoutesWithMiddlewaresAndCustomMux(t *testing.T) {
 		body    string
 		uri     string
 		fromMux bool
+		noMw    bool
 	}{
 		{
 			name: "manual route sees middleware, raw body and raw RequestURI",
@@ -89,15 +90,16 @@ func TestHTTPRoutesWithMiddlewaresAndCustomMux(t *testing.T) {
 			uri:     "/hook/%7euser//x?b=%20&a=1",
 		},
 		{
-			name: "pre-routed custom mux with middlewares does not panic",
+			name: "pre-routed custom mux with middlewares does not panic and keeps its own routes outside them",
 			opts: []Option{
 				WithHTTPMux(preRoutedMux),
 				WithHTTPMiddlewares(readBody),
 			},
 			request: "GET /legacy HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n",
 			status:  http.StatusNoContent,
-			uri:     "/legacy",
+			uri:     "",
 			fromMux: true,
+			noMw:    true,
 		},
 		{
 			name: "gateway path still served behind middlewares",
@@ -136,7 +138,11 @@ func TestHTTPRoutesWithMiddlewaresAndCustomMux(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Equal(t, tt.status, response.StatusCode)
-				require.Equal(t, "1", response.Header.Get("X-Mw"))
+				if tt.noMw {
+					require.Empty(t, response.Header.Get("X-Mw"))
+				} else {
+					require.Equal(t, "1", response.Header.Get("X-Mw"))
+				}
 				require.Equal(t, tt.body, string(responseBody))
 
 				mu.Lock()
@@ -169,4 +175,53 @@ func TestRunWithoutDescsServesManualRoutes(t *testing.T) {
 
 	response := get(t, srv.httpURL("/healthz"))
 	require.Equal(t, http.StatusOK, response.StatusCode)
+}
+
+func TestHTTPMuxMiddlewaresRunBeforeHTTPMiddlewares(t *testing.T) {
+	var (
+		mu    sync.Mutex
+		order []string
+	)
+
+	mark := func(name string) func(http.Handler) http.Handler {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(
+				func(w http.ResponseWriter, r *http.Request) {
+					mu.Lock()
+					order = append(order, name)
+					mu.Unlock()
+					next.ServeHTTP(w, r)
+				},
+			)
+		}
+	}
+
+	userMux := chi.NewMux()
+	userMux.Use(mark("user-mux"))
+
+	srv := start(
+		t,
+		0,
+		[]Option{
+			WithHTTPMux(userMux),
+			WithHTTPMiddlewares(mark("first"), mark("second")),
+			WithHTTPRoutes(
+				func(r chi.Router) {
+					r.Get(
+						"/ping",
+						func(w http.ResponseWriter, r *http.Request) {
+							w.WriteHeader(http.StatusOK)
+						},
+					)
+				},
+			),
+		},
+	)
+
+	response := get(t, srv.httpURL("/ping"))
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, []string{"user-mux", "first", "second"}, order)
 }

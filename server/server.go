@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Server is a transport server.
 type Server struct {
 	opts        *serverOpts
 	listeners   *listenerSet
@@ -28,6 +29,10 @@ type Server struct {
 	stopErr   error
 }
 
+// NewServer creates a Server listening on the rpcPort.
+// Pass additional Options to mutate its behaviour.
+// By default, HTTP JSON handler and gRPC are listening on the same
+// port, admin port is p+2 and profile port is p+4.
 func NewServer(rpcPort int, opts ...Option) *Server {
 	serverOpts := defaultServerOpts(rpcPort)
 	for _, opt := range opts {
@@ -58,6 +63,8 @@ func (s *Server) GRPCAddr() net.Addr {
 	return s.listeners.GRPC.Addr()
 }
 
+// Run starts processing requests to the service.
+// It blocks indefinitely, run asynchronously to do anything after that.
 func (s *Server) Run(descs ...transport.ServiceDesc) error {
 	if err := s.init(descs); err != nil {
 		return err
@@ -157,6 +164,7 @@ func (s *Server) isStopped() bool {
 	return s.stopped
 }
 
+// Stop stops the server gracefully.
 func (s *Server) Stop(ctx context.Context) error {
 	s.stopOnce.Do(func() {
 		s.stopErr = s.stop(ctx)

@@ -59,6 +59,7 @@ srv := server.NewServer(
 
 - Defaults: `ReadHeaderTimeout` 10s, `IdleTimeout` 120s. `WithHTTPServer` runs after defaults and cannot replace the handler.
 - `WithHTTPRoutes` routes sit behind HTTP middlewares and win over gateway paths. Middlewares see the original `RequestURI` and the unread body, so a signature middleware reads `io.ReadAll(r.Body)` and puts back `io.NopCloser`.
+- Order: middlewares of a custom `WithHTTPMux` run first, then `WithHTTPMiddlewares`, then routes. Routes registered directly on the custom mux bypass `WithHTTPMiddlewares`.
 - `WithHTTPMiddlewares` replaces the list on each call: pass all middlewares in one call. Put metrics outermost.
 - gRPC unary middlewares: repeated calls accumulate. `WithGRPCTracing` runs first whatever the option order.
 - Closed gRPC: use a dedicated gRPC port with `WithGRPCListenHost("127.0.0.1")`, or `WithGRPCDisabled()`. With one shared port (default) the host option makes `Run` fail, because the HTTP traffic would be loopback-only too.

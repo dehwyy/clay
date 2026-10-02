@@ -73,7 +73,7 @@ func (s *Server) initListeners() error {
 	return nil
 }
 
-// newListener start net.Listener on a host and port.
+// newListener start net.Listener on a port.
 // It keeps retrying if port is already in use.
 func newListener(host string, port int) (net.Listener, error) {
 	var listener net.Listener

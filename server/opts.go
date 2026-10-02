@@ -87,15 +87,14 @@ func WithHTTPMiddlewares(mws ...mwhttp.Middleware) Option {
 	}
 }
 
-// WithGRPCUnaryMiddlewares adds unary middlewares for gRPC server.
-// Repeated calls are chained in call order.
+// WithGRPCUnaryMiddlewares sets up unary middlewares for gRPC server.
 func WithGRPCUnaryMiddlewares(mws ...grpc.UnaryServerInterceptor) Option {
 	return func(o *serverOpts) {
 		o.GRPCUnary = append(o.GRPCUnary, mws...)
 	}
 }
 
-// WithGRPCMiddlewares is an alias of WithGRPCUnaryMiddlewares.
+// WithGRPCMiddlewares sets up unary middlewares for gRPC server.
 func WithGRPCMiddlewares(mws ...grpc.UnaryServerInterceptor) Option {
 	return WithGRPCUnaryMiddlewares(mws...)
 }

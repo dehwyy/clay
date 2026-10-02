@@ -20,7 +20,13 @@ import (
 type initFunc func() error
 
 func (s *Server) initHTTPServer() error {
-	router := s.opts.HTTPMux
+	outer := s.opts.HTTPMux
+
+	router := chi.NewMux()
+	router.Use(clayroute.Middleware())
+	if len(s.opts.HTTPMiddlewares) > 0 {
+		router.Use(s.opts.HTTPMiddlewares...)
+	}
 
 	router.HandleFunc(
 		"/swagger.json", func(w http.ResponseWriter, req *http.Request) {
@@ -58,12 +64,7 @@ func (s *Server) initHTTPServer() error {
 
 	router.Mount("/", mux)
 
-	root := chi.NewMux()
-	root.Use(clayroute.Middleware())
-	if len(s.opts.HTTPMiddlewares) > 0 {
-		root.Use(s.opts.HTTPMiddlewares...)
-	}
-	root.Mount("/", router)
+	outer.Mount("/", router)
 
 	httpServer := &http.Server{
 		ReadHeaderTimeout: defaultReadHeaderTimeout,
@@ -72,7 +73,7 @@ func (s *Server) initHTTPServer() error {
 	for _, fn := range s.opts.HTTPServerFns {
 		fn(httpServer)
 	}
-	httpServer.Handler = root
+	httpServer.Handler = outer
 	s.httpServer = httpServer
 
 	return nil
