@@ -108,9 +108,15 @@ func register(params registerParams) {
 
 				select {
 				case runErr := <-done:
-					return errors.Join(stopErr, runErr)
+					return errors.Join(
+						stopErr,
+						runErr,
+					)
 				case <-ctx.Done():
-					return errors.Join(stopErr, ctx.Err())
+					return errors.Join(
+						stopErr,
+						ctx.Err(),
+					)
 				}
 			},
 		},

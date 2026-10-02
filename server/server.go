@@ -86,7 +86,10 @@ func (s *Server) init(descs []transport.ServiceDesc) error {
 	} {
 		if err := fn(); err != nil {
 			if s.listeners != nil {
-				s.listeners.closeAll()
+				err = errors.Join(
+					err,
+					s.listeners.closeAll(),
+				)
 				s.listeners = nil
 			}
 			return err

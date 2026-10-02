@@ -1,6 +1,7 @@
 package server
 
 import (
+	stderrors "errors"
 	"net"
 	"strconv"
 	"time"
@@ -21,12 +22,17 @@ type listenerSet struct {
 	GRPC         net.Listener
 }
 
-func (l *listenerSet) closeAll() {
+func (l *listenerSet) closeAll() error {
+	var errs []error
 	for _, listener := range []net.Listener{l.root, l.HTTP, l.GRPC} {
-		if listener != nil {
-			_ = listener.Close()
+		if listener == nil {
+			continue
+		}
+		if err := listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+			errs = append(errs, err)
 		}
 	}
+	return stderrors.Join(errs...)
 }
 
 func (s *Server) initListeners() error {
@@ -56,8 +62,10 @@ func (s *Server) initListeners() error {
 		}
 	}
 	if err != nil {
-		liSet.closeAll()
-		return errors.Wrap(err, "couldn't create listeners")
+		return errors.Wrap(
+			stderrors.Join(err, liSet.closeAll()),
+			"couldn't create listeners",
+		)
 	}
 
 	s.listeners = liSet
