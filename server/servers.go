@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/not-for-prod/clay/server/clayroute"
 	"github.com/not-for-prod/clay/transport"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"google.golang.org/grpc"
@@ -19,19 +20,8 @@ import (
 type initFunc func() error
 
 func (s *Server) initHTTPServer() error {
-	router := chi.NewMux()
+	router := s.opts.HTTPMux
 
-	// Use custom mux option
-	if s.opts.HTTPMux != nil {
-		router = s.opts.HTTPMux
-	}
-
-	// Apply http middlewares
-	if len(s.opts.HTTPMiddlewares) > 0 {
-		router.Use(s.opts.HTTPMiddlewares...)
-	}
-
-	// Inject static Swagger as root handler
 	router.HandleFunc(
 		"/swagger.json", func(w http.ResponseWriter, req *http.Request) {
 			io.Copy(w, bytes.NewReader(s.serviceDesc.SwaggerDef()))
@@ -53,24 +43,54 @@ func (s *Server) initHTTPServer() error {
 		},
 	)
 
-	// Register everything
-	mux := runtime.NewServeMux(s.opts.RuntimeServeMuxOpts...)
+	for _, routes := range s.opts.HTTPRoutes {
+		routes(router)
+	}
+
+	muxOpts := make([]runtime.ServeMuxOption, 0, len(s.opts.RuntimeServeMuxOpts)+1)
+	muxOpts = append(muxOpts, s.opts.RuntimeServeMuxOpts...)
+	muxOpts = append(muxOpts, clayroute.GatewayOption())
+	mux := runtime.NewServeMux(muxOpts...)
 
 	if err := s.serviceDesc.RegisterHTTP(context.Background(), mux); err != nil {
 		return errors.Wrap(err, "couldn't register HTTP server")
 	}
 
 	router.Mount("/", mux)
-	s.httpServer = &http.Server{
-		Handler: router,
+
+	root := chi.NewMux()
+	root.Use(clayroute.Middleware())
+	if len(s.opts.HTTPMiddlewares) > 0 {
+		root.Use(s.opts.HTTPMiddlewares...)
 	}
+	root.Mount("/", router)
+
+	httpServer := &http.Server{
+		ReadHeaderTimeout: defaultReadHeaderTimeout,
+		IdleTimeout:       defaultIdleTimeout,
+	}
+	for _, fn := range s.opts.HTTPServerFns {
+		fn(httpServer)
+	}
+	httpServer.Handler = root
+	s.httpServer = httpServer
 
 	return nil
 }
 
 func (s *Server) initGRPCServer() error {
-	grpcServer := grpc.NewServer(s.opts.GRPCOpts...)
-	reflection.Register(grpcServer)
+	grpcOpts := s.opts.GRPCOpts
+	if s.opts.GRPCUnaryInterceptor != nil {
+		grpcOpts = append(
+			append([]grpc.ServerOption(nil), grpcOpts...),
+			grpc.UnaryInterceptor(s.opts.GRPCUnaryInterceptor),
+		)
+	}
+
+	grpcServer := grpc.NewServer(grpcOpts...)
+	if s.opts.EnableReflection {
+		reflection.Register(grpcServer)
+	}
 
 	// apply gRPC interceptor
 	if d, ok := s.serviceDesc.(transport.ConfigurableServiceDesc); ok {

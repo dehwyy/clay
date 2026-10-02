@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -21,19 +23,42 @@ type serverOpts struct {
 
 	HTTPMiddlewares []func(http.Handler) http.Handler
 
+	HTTPServerFns []func(*http.Server)
+	HTTPRoutes    []func(chi.Router)
+
 	GRPCOpts             []grpc.ServerOption
+	GRPCUnary            []grpc.UnaryServerInterceptor
+	GRPCTracing          grpc.UnaryServerInterceptor
 	GRPCUnaryInterceptor grpc.UnaryServerInterceptor
+	GRPCListenHost       string
+	GRPCDisabled         bool
 
 	EnableReflection    bool
 	RuntimeServeMuxOpts []runtime.ServeMuxOption
+
+	DrainFn    func(ctx context.Context)
+	DrainDelay time.Duration
 }
 
 func defaultServerOpts(mainPort int) *serverOpts {
 	return &serverOpts{
-		RPCPort:  mainPort,
-		HTTPPort: mainPort,
-		HTTPMux:  chi.NewMux(),
+		RPCPort:          mainPort,
+		HTTPPort:         mainPort,
+		HTTPMux:          chi.NewMux(),
+		EnableReflection: true,
 	}
+}
+
+func (o *serverOpts) finalize() {
+	chain := make([]grpc.UnaryServerInterceptor, 0, len(o.GRPCUnary)+1)
+	if o.GRPCTracing != nil {
+		chain = append(chain, o.GRPCTracing)
+	}
+	chain = append(chain, o.GRPCUnary...)
+	if len(chain) == 0 {
+		return
+	}
+	o.GRPCUnaryInterceptor = grpc_middleware.ChainUnaryServer(chain...)
 }
 
 // WithGRPCOpts sets gRPC server options.
@@ -62,22 +87,17 @@ func WithHTTPMiddlewares(mws ...mwhttp.Middleware) Option {
 	}
 }
 
-// WithGRPCUnaryMiddlewares sets up unary middlewares for gRPC server.
+// WithGRPCUnaryMiddlewares adds unary middlewares for gRPC server.
+// Repeated calls are chained in call order.
 func WithGRPCUnaryMiddlewares(mws ...grpc.UnaryServerInterceptor) Option {
-	mw := grpc_middleware.ChainUnaryServer(mws...)
 	return func(o *serverOpts) {
-		o.GRPCOpts = append(o.GRPCOpts, grpc.UnaryInterceptor(mw))
-		o.GRPCUnaryInterceptor = mw
+		o.GRPCUnary = append(o.GRPCUnary, mws...)
 	}
 }
 
-// WithGRPCMiddlewares sets up unary middlewares for gRPC server.
+// WithGRPCMiddlewares is an alias of WithGRPCUnaryMiddlewares.
 func WithGRPCMiddlewares(mws ...grpc.UnaryServerInterceptor) Option {
-	mw := grpc_middleware.ChainUnaryServer(mws...)
-	return func(o *serverOpts) {
-		o.GRPCOpts = append(o.GRPCOpts, grpc.UnaryInterceptor(mw))
-		o.GRPCUnaryInterceptor = mw
-	}
+	return WithGRPCUnaryMiddlewares(mws...)
 }
 
 // WithGRPCStreamMiddlewares sets up stream middlewares for gRPC server.
