@@ -39,3 +39,52 @@ for a full guide.
 
 You may contribute in several ways like creating new features, fixing bugs,
 improving documentation and/or examples using GitHub pull requests.
+
+# Server options (v0.5.0)
+
+```go
+srv := server.NewServer(
+	grpcPort,
+	server.WithHTTPPort(httpPort),
+	server.WithGRPCListenHost("127.0.0.1"),
+	server.WithHTTPServer(func(s *http.Server) { s.ReadHeaderTimeout = 5 * time.Second }),
+	server.WithHTTPMiddlewares(metrics.Middleware(), signature.Middleware()),
+	server.WithHTTPRoutes(func(r chi.Router) { r.Post("/hook/{provider}", webhook) }),
+	server.WithGRPCTracing(tracing),
+	server.WithGRPCUnaryMiddlewares(recoverer, auth),
+	server.WithDrain(readiness.SetNotReady, 5*time.Second),
+	server.WithRuntimeServeMuxOpts(runtime.WithErrorHandler(handleErr)),
+)
+```
+
+- Defaults: `ReadHeaderTimeout` 10s, `IdleTimeout` 120s. `WithHTTPServer` runs after defaults and cannot replace the handler.
+- `WithHTTPRoutes` routes sit behind HTTP middlewares and win over gateway paths. Middlewares see the original `RequestURI` and the unread body, so a signature middleware reads `io.ReadAll(r.Body)` and puts back `io.NopCloser`.
+- `WithHTTPMiddlewares` replaces the list on each call: pass all middlewares in one call. Put metrics outermost.
+- gRPC unary middlewares: repeated calls accumulate. `WithGRPCTracing` runs first whatever the option order.
+- Closed gRPC: use a dedicated gRPC port with `WithGRPCListenHost("127.0.0.1")`, or `WithGRPCDisabled()`. With one shared port (default) the host option makes `Run` fail, because the HTTP traffic would be loopback-only too.
+- Shutdown: `Stop(ctx)` runs the drain hook, waits the delay, stops accepting, shuts HTTP down and stops gRPC gracefully. When ctx ends first, remaining work is cut. `Run` returns `nil` after `Stop`.
+- `Ready()` is closed once the listeners are bound; `HTTPAddr()` and `GRPCAddr()` are valid after that (useful with port 0 in tests).
+- `Run()` with no descriptors serves manual routes only.
+
+## Metrics by route template
+
+```go
+metrics := mwhttp.NewServerMetrics(
+	mwhttp.WithNamespace("app"),
+	mwhttp.WithRouteLabel(clayroute.Pattern),
+)
+```
+
+Labels become `http_route` (gateway template such as `/v1/order/{id}`, chi pattern for manual routes, `unmatched` otherwise). The started counter carries only `http_method`, because the route is known after the request is handled. Without the option the old `http_path` label is kept.
+`server` installs `clayroute.Middleware()` and `clayroute.GatewayOption()` itself.
+
+## fx
+
+```go
+fx.New(
+	clayfx.Module(grpcPort, server.WithHTTPPort(httpPort)),
+	clayfx.ProvideDesc(orderv1.NewOrderServiceDesc),
+).Run()
+```
+
+`Module` starts `Run` on OnStart (startup failures fail the app, later failures call `fx.Shutdowner`) and calls `Stop` on OnStop. For a config from the graph use `clayfx.ModuleFromConfig(func(cfg *Config) clayfx.Config {...})`. Descriptors are collected from the `clay.descs` group.
