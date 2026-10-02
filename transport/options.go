@@ -1,7 +1,7 @@
 package transport
 
 import (
-	"github.com/not-for-prod/clay/transport/httptransport"
+	"github.com/dehwyy/clay/transport/httptransport"
 	"google.golang.org/grpc"
 )
 

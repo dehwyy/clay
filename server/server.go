@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/not-for-prod/clay/transport"
+	"github.com/dehwyy/clay/transport"
 	"github.com/soheilhy/cmux"
 	"google.golang.org/grpc"
 )

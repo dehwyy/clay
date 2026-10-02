@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dehwyy/clay/server/middlewares/mwhttp"
 	"github.com/go-chi/chi/v5"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/not-for-prod/clay/server/middlewares/mwhttp"
 	"google.golang.org/grpc"
 )
 

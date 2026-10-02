@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/not-for-prod/clay/server"
-	"github.com/not-for-prod/clay/transport"
+	"github.com/dehwyy/clay/server"
+	"github.com/dehwyy/clay/transport"
 	"go.uber.org/fx"
 )
 

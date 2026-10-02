@@ -9,7 +9,7 @@ managed:
     - module: buf.build/bufbuild/protovalidate
   override:
     - file_option: go_package_prefix
-      value: github.com/not-for-prod/clay/doc/example
+      value: github.com/dehwyy/clay/doc/example
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: pb

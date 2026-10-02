@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"github.com/not-for-prod/clay/server/middlewares/mwcommon"
+	"github.com/dehwyy/clay/server/middlewares/mwcommon"
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"

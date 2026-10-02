@@ -1,4 +1,4 @@
-module github.com/not-for-prod/clay
+module github.com/dehwyy/clay
 
 go 1.25.0
 

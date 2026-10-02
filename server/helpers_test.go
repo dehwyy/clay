@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dehwyy/clay/transport"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/not-for-prod/clay/transport"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"

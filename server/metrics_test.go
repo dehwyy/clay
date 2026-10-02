@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/dehwyy/clay/server/clayroute"
+	"github.com/dehwyy/clay/server/middlewares/mwhttp"
 	"github.com/go-chi/chi/v5"
-	"github.com/not-for-prod/clay/server/clayroute"
-	"github.com/not-for-prod/clay/server/middlewares/mwhttp"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )

@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dehwyy/clay/clayfx"
+	"github.com/dehwyy/clay/server"
 	"github.com/go-chi/chi/v5"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/not-for-prod/clay/clayfx"
-	"github.com/not-for-prod/clay/server"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxtest"

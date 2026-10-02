@@ -5,9 +5,9 @@ package example
 import (
 	context "context"
 	_ "embed"
+	transport "github.com/dehwyy/clay/transport"
+	httptransport "github.com/dehwyy/clay/transport/httptransport"
 	runtime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	transport "github.com/not-for-prod/clay/transport"
-	httptransport "github.com/not-for-prod/clay/transport/httptransport"
 	grpc "google.golang.org/grpc"
 )
 

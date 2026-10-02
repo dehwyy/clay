@@ -14,8 +14,8 @@ var (
 	contextPackage       = protogen.GoImportPath("context")
 	grpcPackage          = protogen.GoImportPath("google.golang.org/grpc")
 	embedPackage         = protogen.GoImportPath("embed")
-	httptransportPackage = protogen.GoImportPath("github.com/not-for-prod/clay/transport/httptransport")
-	transportPackage     = protogen.GoImportPath("github.com/not-for-prod/clay/transport")
+	httptransportPackage = protogen.GoImportPath("github.com/dehwyy/clay/transport/httptransport")
+	transportPackage     = protogen.GoImportPath("github.com/dehwyy/clay/transport")
 	runtimePackage       = protogen.GoImportPath("github.com/grpc-ecosystem/grpc-gateway/v2/runtime")
 	// flags
 	implgenDstPathFlag = flag.String("dst", "", "root import path for app implementation")

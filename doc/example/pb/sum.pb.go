@@ -362,9 +362,9 @@ const file_sum_proto_rawDesc = "" +
 	"\x10Authentification\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/v1/example/logout\x12L\n" +
 	"\x03Sum\x12\x11.sumpb.SumRequest\x1a\x12.sumpb.SumResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01b\"\x13/v1/example/sum/{a}\x1a\r\x92A\n" +
 	"\n" +
-	"\bSummatorB\x9d\x01\x92A'\x12%\n" +
+	"\bSummatorB\x97\x01\x92A'\x12%\n" +
 	"\bSummator\x12\x14summator application2\x031.0\n" +
-	"\tcom.sumpbB\bSumProtoP\x01Z(github.com/not-for-prod/clay/doc/example\xa2\x02\x03SXX\xaa\x02\x05Sumpb\xca\x02\x05Sumpb\xe2\x02\x11Sumpb\\GPBMetadata\xea\x02\x05Sumpbb\x06proto3"
+	"\tcom.sumpbB\bSumProtoP\x01Z\"github.com/dehwyy/clay/doc/example\xa2\x02\x03SXX\xaa\x02\x05Sumpb\xca\x02\x05Sumpb\xe2\x02\x11Sumpb\\GPBMetadata\xea\x02\x05Sumpbb\x06proto3"
 
 var (
 	file_sum_proto_rawDescOnce sync.Once

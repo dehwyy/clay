@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/dehwyy/clay/server/clayroute"
+	"github.com/dehwyy/clay/transport"
 	"github.com/go-chi/chi/v5"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/not-for-prod/clay/server/clayroute"
-	"github.com/not-for-prod/clay/transport"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"

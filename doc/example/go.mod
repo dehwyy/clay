@@ -2,13 +2,13 @@ module github.com/utrack/clay/doc/example
 
 go 1.25.0
 
-replace github.com/not-for-prod/clay => ../../
+replace github.com/dehwyy/clay => ../../
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
 	github.com/google/uuid v1.6.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0
-	github.com/not-for-prod/clay v0.0.0-00010101000000-000000000000
+	github.com/dehwyy/clay v0.0.0-00010101000000-000000000000
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sirupsen/logrus v1.9.4
