@@ -9,8 +9,9 @@ import (
 )
 
 type serverMetricsOptions struct {
-	namespace string
-	subsystem string
+	namespace  string
+	subsystem  string
+	routeLabel func(*http.Request) string
 }
 
 type ServerMetricsOption func(*serverMetricsOptions)
@@ -39,9 +40,16 @@ func WithSubsystem(subsystem string) ServerMetricsOption {
 	}
 }
 
+func WithRouteLabel(fn func(*http.Request) string) ServerMetricsOption {
+	return func(o *serverMetricsOptions) {
+		o.routeLabel = fn
+	}
+}
+
 // ServerMetrics represents a collection of metrics to be registered on a
 // Prometheus metrics registry for a HTTP server.
 type ServerMetrics struct {
+	routeLabel           func(*http.Request) string
 	serverStartedCounter *prometheus.CounterVec
 	serverHandledCounter *prometheus.CounterVec
 	// serverHandledHistogram can be nil.
@@ -50,10 +58,17 @@ type ServerMetrics struct {
 
 func NewServerMetrics(opts ...ServerMetricsOption) *ServerMetrics {
 	serverMetricsOpts := newServerMetricsOptions(opts...)
-	defaultLabels := []string{"http_method", "http_path"}
-	defaultLabelsWithCode := []string{"http_method", "http_path", "http_code"}
+	pathLabel := "http_path"
+	startedLabels := []string{"http_method", "http_path"}
+	if serverMetricsOpts.routeLabel != nil {
+		pathLabel = "http_route"
+		startedLabels = []string{"http_method"}
+	}
+	defaultLabels := []string{"http_method", pathLabel}
+	defaultLabelsWithCode := []string{"http_method", pathLabel, "http_code"}
 
 	return &ServerMetrics{
+		routeLabel: serverMetricsOpts.routeLabel,
 		serverStartedCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: serverMetricsOpts.namespace,
@@ -61,7 +76,7 @@ func NewServerMetrics(opts ...ServerMetricsOption) *ServerMetrics {
 				Name:      "http_server_started_total",
 				Help:      "Total number of requests started on the server.",
 			},
-			defaultLabels,
+			startedLabels,
 		),
 		serverHandledCounter: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -111,15 +126,24 @@ func (m *ServerMetrics) Middleware() Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
-				m.serverStartedCounter.WithLabelValues(r.Method, r.URL.Path).Inc()
+				if m.routeLabel == nil {
+					m.serverStartedCounter.WithLabelValues(r.Method, r.URL.Path).Inc()
+				} else {
+					m.serverStartedCounter.WithLabelValues(r.Method).Inc()
+				}
 
 				startedAt := time.Now()
 				lwr := newLoggingResponseWriter(w)
 				next.ServeHTTP(lwr, r)
 				endedAt := time.Since(startedAt)
 
-				m.serverHandledCounter.WithLabelValues(r.Method, r.URL.Path, strconv.Itoa(lwr.statusCode)).Inc()
-				m.serverHandledHistogram.WithLabelValues(r.Method, r.URL.Path).Observe(endedAt.Seconds())
+				path := r.URL.Path
+				if m.routeLabel != nil {
+					path = m.routeLabel(r)
+				}
+
+				m.serverHandledCounter.WithLabelValues(r.Method, path, strconv.Itoa(lwr.statusCode)).Inc()
+				m.serverHandledHistogram.WithLabelValues(r.Method, path).Observe(endedAt.Seconds())
 			},
 		)
 	}
@@ -141,4 +165,8 @@ func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 func (lrw *loggingResponseWriter) WriteHeader(code int) {
 	lrw.statusCode = code
 	lrw.ResponseWriter.WriteHeader(code)
+}
+
+func (lrw *loggingResponseWriter) Unwrap() http.ResponseWriter {
+	return lrw.ResponseWriter
 }
